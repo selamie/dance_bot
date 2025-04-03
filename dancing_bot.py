@@ -5,50 +5,47 @@ from robomail.motion import GotoPoseLive
 from frankapy import FrankaConstants as FC 
 import copy
 
-def apply_xrot(rad,pose):
-	xrot = np.array([[1,0,0],[0,np.cos(rad),-np.sin(rad)],[0,np.sin(rad),np.cos(rad)]])
-	new = pose@xrot
-	return new
+from sample_from_spline import spline_resample, waypoints, timestamps
+from audio_analysis import analyze_audio, format_time
+from query_gpt import queryGPT_waypoints
 
-
+# reset joints:
 fa = FrankaArm()
 fa.reset_joints()
 
+# print(len(waypoints), " ", len(timestamps))
+timestamps, timing = analyze_audio("suavemente.mp3")
+
+waypoints = [-1]
+print(len(timestamps))
+while len(waypoints) != len(timestamps):
+    waypoints = queryGPT_waypoints(timestamps)
+    print(len(waypoints), " ", len(timestamps))
+
+print("waypoints match timestamps")
+waypoints = np.array(waypoints)
+
+trajectory, dt = spline_resample(waypoints, timestamps)
+print(trajectory[0:10])
+print("dt: ", round(dt,3))
+dt = round(dt,3)
 controller = GotoPoseLive()
-
-input("press enter to start dance!")
-
-# reset joints:
-
-# List of waypoints as numpy arrays with additional in-between points for a smoother dance
-waypoints = [
-    np.array([0.5, -0.2, 0.2]),  # Bottom-left middle
-    np.array([0.5, 0.0, 0.2]),   # Center bottom
-    np.array([0.5, 0.2, 0.2]),   # Bottom-right middle
-    np.array([0.6, 0.2, 0.3]),   # Slight raise
-    np.array([0.7, 0.0, 0.4]),   # Top far center
-    np.array([0.6, -0.1, 0.5]),  # Diagonal transition
-    np.array([0.3, 0, 0.4]),     # Top near center
-    np.array([0.4, 0.1, 0.5]),   # Smooth transition
-    np.array([0.5, -0.2, 0.6]),  # Top-left middle
-    np.array([0.5, 0.0, 0.5]),   # Center top
-    np.array([0.5, 0.2, 0.6]),   # Top-right middle
-    np.array([0.4, 0.1, 0.3]),   # Lowering motion
-    np.array([0.35, -0.2, 0.2])   # Reset to start
-]
-
-pose = FC.HOME_POSE.copy()
-controller.set_goal_pose(pose)
 controller.start()
 
+print(f"song snippet starts and ends at: {format_time(timing[0])}, {format_time(timing[1])}")
+input("press enter to start dance!")
 
-for i,p in enumerate(waypoints): 
+pose = FC.HOME_POSE.copy()
+for i,p in enumerate(trajectory): 
+    print(i)
     # pose = controller.fa.get_pose()
     pose.translation = p
     controller.set_goal_pose(pose)
-        # while np.linalg.norm(pose_controller.fa.get_pose().translation - move_to_pose.translation) > 0.05:
-    while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
-        time.sleep(0.25)
+    # while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
+    time.sleep(dt)
+
+#save trajectory: 
+
 
 
 controller.stop()
