@@ -4,12 +4,14 @@ from frankapy import FrankaArm # import franka arm
 from robomail.motion import GotoPoseLive
 from frankapy import FrankaConstants as FC 
 import copy
-
+from rospy import Rate
 from sample_from_spline import spline_resample, waypoints, timestamps
 
 # reset joints:
 fa = FrankaArm()
 fa.reset_joints()
+
+# rate = Rate(10)
 
 waypoints = np.array([
  [0.603688086033108, -0.082553414956053, 0.4119113989118244],
