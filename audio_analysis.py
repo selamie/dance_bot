@@ -74,6 +74,6 @@ def format_time(secs):
     return f"{int(minutes)}:{int(seconds)}" 
 
 if __name__ == '__main__':
-    audio_path = "skutababa.mp3"  # Replace with your file
+    audio_path = "suavemente.mp3"  # Replace with your file
     timestamps, timing = analyze_audio(audio_path, plot = True)
     print(format_time(timing[0]), " ", format_time(timing[1]))
