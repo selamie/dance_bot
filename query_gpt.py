@@ -29,6 +29,17 @@ def queryGPT_waypoints(timestamps):
     client = OpenAI(api_key=api_key,
                     base_url="https://cmu.litellm.ai")
     # Define the prompt
+    # prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
+    # The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
+    # The x,y,z coordinates of this bounded rectangle are: 
+    # \n\n[[0.35,-0.2,0.2], [0.35,0.2,0.2], [0.35,-0.2,0.6], [0.35,0.2,0.6], [0.7,-0.2,0.2], [0.7,0.2,0.2], [0.7,-0.2,0.6], [0.7,0.2,0.6]]
+    # \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
+    # \n\nIn addition, we have a list of timestamps in seconds at which the movements should occur: 
+    # \n\n {timestamps}
+    # \n\n Respond with a plan of [x,y,z,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list above. 
+    # Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. In general,
+    # try to use v-shaped motions since you are commanding the "head" of the robot on the "neck" of its arm.
+    # \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
     prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
     The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
     The x,y,z coordinates of this bounded rectangle are: 
@@ -40,6 +51,7 @@ def queryGPT_waypoints(timestamps):
     Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. In general,
     try to use v-shaped motions since you are commanding the "head" of the robot on the "neck" of its arm.
     \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
+    
     # Make the API call
 
     # print(prompt)

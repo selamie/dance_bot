@@ -11,7 +11,7 @@ def analyze_audio(audio_path, plot = False):
     # Determine a random 30-second segment within the audio duration
     duration = librosa.get_duration(y=y, sr=sr)
     if duration > 30:
-        start_time = random.uniform(0, (duration - duration/3))
+        start_time = 0#random.uniform(0, (duration - duration/3))
         end_time = start_time + 30
         print(f"Selected segment: {start_time:.2f}s to {end_time:.2f}s")
         
@@ -23,16 +23,16 @@ def analyze_audio(audio_path, plot = False):
 
     # Onset detection
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-    onset_frames = librosa.onset.onset_detect(y=y, sr=sr, units='time', backtrack=False, pre_max=20, post_max=20, pre_avg=50, post_avg=50, delta=0.2)
+    onset_times = librosa.onset.onset_detect(y=y, sr=sr, units='time', backtrack=False, pre_max=20, post_max=20, pre_avg=50, post_avg=50, delta=0.2)
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
     beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-    # print('Estimated tempo: {:.2f} beats per minute'.format(tempo))
+    print(f'Estimated tempo: {tempo} beats per minute')
 
     # Plot onset strength
     if plot:
         plt.figure(figsize=(10, 4))
         librosa.display.waveshow(y, sr=sr, alpha=0.5)
-        plt.vlines(onset_frames, -1, 1, color="r", linestyle="dashed", label="Onsets")
+        plt.vlines(onset_times, -1, 1, color="r", linestyle="dashed", label="Onsets")
         plt.vlines(beat_times, -1, 1, color="g", linestyle="dashed", label="Onsets")
 
         plt.title("Onset Detection")
@@ -52,11 +52,15 @@ def analyze_audio(audio_path, plot = False):
 
         # Print detected onset times
         print("Detected Onsets (seconds):")
-        print(onset_frames)
+        print(onset_times)
         print(f"start time: {start_time}, end: {end_time}")
     
-    timestamps = [round(frame, 2) for frame in onset_frames]
+
+    timestamps = [round(frame, 2) for frame in onset_times]
+
+    timestamps = np.union1d(timestamps,beat_times)
     
+    timestamps.sort()
 
     timing = (start_time, end_time)
     return timestamps, timing 
