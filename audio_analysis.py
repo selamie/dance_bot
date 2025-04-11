@@ -24,14 +24,31 @@ def analyze_audio(audio_path, plot = False):
     # Onset detection
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
     onset_frames = librosa.onset.onset_detect(y=y, sr=sr, units='time', backtrack=False, pre_max=20, post_max=20, pre_avg=50, post_avg=50, delta=0.2)
+    tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+    # print('Estimated tempo: {:.2f} beats per minute'.format(tempo))
+
     # Plot onset strength
     if plot:
         plt.figure(figsize=(10, 4))
         librosa.display.waveshow(y, sr=sr, alpha=0.5)
         plt.vlines(onset_frames, -1, 1, color="r", linestyle="dashed", label="Onsets")
+        plt.vlines(beat_times, -1, 1, color="g", linestyle="dashed", label="Onsets")
+
         plt.title("Onset Detection")
         plt.legend()
         plt.show()
+
+        plt.figure(figsize=(10, 4))
+        librosa.display.waveshow(y, sr=sr, alpha=0.5)
+        # plt.vlines(onset_frames, -1, 1, color="r", linestyle="dashed", label="Onsets")
+        plt.vlines(beat_times, -1, 1, color="g", linestyle="dashed", label="Onsets")
+
+        plt.title("beat times only")
+        plt.legend()
+        plt.show()
+
+
 
         # Print detected onset times
         print("Detected Onsets (seconds):")
@@ -39,6 +56,7 @@ def analyze_audio(audio_path, plot = False):
         print(f"start time: {start_time}, end: {end_time}")
     
     timestamps = [round(frame, 2) for frame in onset_frames]
+    
 
     timing = (start_time, end_time)
     return timestamps, timing 
