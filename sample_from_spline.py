@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # Example 4D waypoints (x, y, z, t)
 
 # start time: 78.6551831130475, end: 108.6551831130475
-waypoints = np.array([
+WAYPTS = np.array([
  [0.603688086033108, -0.082553414956053, 0.4119113989118244],
  [0.6205364913215593, -0.09797828117995103, 0.45234492323433695],
  [0.6111610975263401, -0.07384732522634774, 0.4392206582967124],
@@ -65,7 +65,7 @@ waypoints = np.array([
  [0.45038236183999236, 0.19602423252891982, 0.3442522642150855]])
 
 
-timestamps = np.array([
+TSTAMPS = np.array([
     0.34829932,  0.81269841,  1.10294785,  1.40480726,  1.71827664,  2.03174603,
     2.33360544,  3.55265306,  3.86612245,  4.16798186,  4.46984127,  4.78331066,
     5.08517007,  5.39863946,  5.70049887,  6.31582766,  8.45206349,  9.68272109,
@@ -79,16 +79,16 @@ timestamps = np.array([
 ])
 
 
-def spline_resample(waypoints, timestamps, num_samples = 1000, total_dur = 30, plot = False):
+def spline_resample(waypoints, num_samples = 250, total_dur = 30, plot = False):
     # Extract t and corresponding x, y, z
-    t = timestamps  # Time values
+    t = waypoints[:,3]  # Time values
     x = waypoints[:, 0]
     y = waypoints[:, 1]
     z = waypoints[:, 2]
 
     # Ensure t is strictly increasing
     if not np.all(np.diff(t) > 0):
-        raise ValueError("Time values must be strictly increasing.")
+        raise ValueError("Time values must be strictly increasing, or used wrong waypoints.")
 
     # Fit cubic splines for x, y, and z as functions of time t
     spl_x = CubicSpline(t, x)
@@ -122,5 +122,64 @@ def spline_resample(waypoints, timestamps, num_samples = 1000, total_dur = 30, p
         print(resampled_motion)
     return resampled_motion, dt
 
+def spline_resample_orient(waypoints, num_samples = 1000, total_dur = 30, plot = False):
+    # Extract t and corresponding x, y, z
+    t = waypoints[:, -1]  # Time values
+    x = waypoints[:, 0]
+    y = waypoints[:, 1]
+    z = waypoints[:, 2]
+    qx = waypoints[:,3] 
+    qy = waypoints[:,4]
+    qz = waypoints[:,5]
+    qw = waypoints[:,6]
+
+    # Ensure t is strictly increasing
+    if not np.all(np.diff(t) > 0):
+        raise ValueError("Time values must be strictly increasing.")
+
+    # Fit cubic splines for x, y, and z as functions of time t
+    spl_x = CubicSpline(t, x)
+    spl_y = CubicSpline(t, y)
+    spl_z = CubicSpline(t, z)
+    spl_qx = CubicSpline(t, qx)
+    spl_qy = CubicSpline(t, qy)
+    spl_qz = CubicSpline(t, qz)
+    spl_qw = CubicSpline(t, qw)
+
+
+    # Define new time values for resampling (e.g., 100 evenly spaced time steps)
+    t_new = np.linspace(0, total_dur, num_samples)
+
+    # Evaluate the splines at new time points
+    x_new = spl_x(t_new)
+    y_new = spl_y(t_new)
+    z_new = spl_z(t_new)
+    qx_new = spl_qx(t_new)
+    qy_new = spl_qy(t_new)
+    qz_new = spl_qz(t_new)
+    qw_new = spl_qw(t_new)
+
+
+    dt = np.diff(t_new)[0]
+    # Interpolated motion trajectory
+    resampled_motion = np.vstack([x_new, y_new, z_new,qx_new,qy_new,qz_new,qw_new]).T
+
+    # Plot trajectory
+    if plot: 
+        fig = plt.figure(figsize=(8,6))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot(x_new, y_new, z_new, label='Interpolated Path', color='b')
+        ax.scatter(x, y, z, color='r', label='Original Waypoints')
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Z")
+        ax.legend()
+        plt.show()
+
+        print(resampled_motion)
+    return resampled_motion, dt
+
+
+
 if __name__ == '__main__':
-    spline_resample(waypoints, timestamps, plot = True)
+    spline_resample(WAYPTS, TSTAMPS, plot = True)

@@ -5,15 +5,12 @@ from robomail.motion import GotoPoseLive
 from frankapy import FrankaConstants as FC 
 import copy
 from rospy import Rate
-from sample_from_spline import spline_resample, waypoints, timestamps
+from sample_from_spline import spline_resample, spline_resample_orient
 
-# reset joints:
-fa = FrankaArm()
-fa.reset_joints()
 
 # rate = Rate(10)
 
-waypoints = np.array([
+WAYPOINTS = np.array([
  [0.603688086033108, -0.082553414956053, 0.4119113989118244],
  [0.6205364913215593, -0.09797828117995103, 0.45234492323433695],
  [0.6111610975263401, -0.07384732522634774, 0.4392206582967124],
@@ -73,7 +70,7 @@ waypoints = np.array([
  [0.45038236183999236, 0.19602423252891982, 0.3442522642150855]])
 
 
-timestamps = np.array([
+TSTAMPS = np.array([
     0.34829932,  0.81269841,  1.10294785,  1.40480726,  1.71827664,  2.03174603,
     2.33360544,  3.55265306,  3.86612245,  4.16798186,  4.46984127,  4.78331066,
     5.08517007,  5.39863946,  5.70049887,  6.31582766,  8.45206349,  9.68272109,
@@ -86,34 +83,133 @@ timestamps = np.array([
    27.28344671, 28.35156463, 29.73315193
 ])
 
-trajectory, dt = spline_resample(waypoints, timestamps)
-print(trajectory[0:10])
-print("dt: ", round(dt,3))
-dt = round(dt,3)
-controller = GotoPoseLive()
-controller.start()
+def quaternion_to_rotation_matrix(q):
+    # Extract quaternion components from the 1x4 array
+    qx, qy, qz, qw = q
+    
+    R = np.array([
+        [1 - 2*(qy**2 + qz**2), 2*(qx*qy - qw*qz), 2*(qx*qz + qw*qy)],
+        [2*(qx*qy + qw*qz), 1 - 2*(qx**2 + qz**2), 2*(qy*qz - qw*qx)],
+        [2*(qx*qz - qw*qy), 2*(qy*qz + qw*qx), 1 - 2*(qx**2 + qy**2)]
+    ])
+    
+    return R
 
-input("press enter to start dance!")
+def apply_xrot(rad,pose):
+    xrot = np.array([[1,0,0],[0,np.cos(rad),-np.sin(rad)],[0,np.sin(rad),np.cos(rad)]])
+    new = pose@xrot
 
-pose = FC.HOME_POSE.copy()
-for i,p in enumerate(trajectory): 
-    print(i)
-    # pose = controller.fa.get_pose()
-    pose.translation = p
-    controller.set_goal_pose(pose)
-    # while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
-    time.sleep(dt)
+    return new
 
-#save trajectory: 
-
-
-
-controller.stop()
-# Write your code below:
-# import pdb; pdb.set_trace()
+def apply_yrot(rad, pose):
+    yrot = np.array([
+        [np.cos(rad), 0, np.sin(rad)],
+        [0, 1, 0],
+        [-np.sin(rad), 0, np.cos(rad)]
+    ])
+    new = pose @ yrot
+    return new
 
 
-# choose 30 sec sequence
-# get timing from audio file (intensity)
-# give times to chatgpt, populate with position
-# (optional) fit to spline, re-sample 
+def apply_zrot(rad, pose):
+    zrot = np.array([
+        [np.cos(rad), -np.sin(rad), 0],
+        [np.sin(rad), np.cos(rad), 0],
+        [0, 0, 1]
+    ])
+    new = pose @ zrot
+    return new
+
+def generate_rotation_array(n,degs):
+    angles_deg = np.random.uniform(-degs, degs, size=n)
+    angles_rad = np.deg2rad(angles_deg)
+    
+    axes = np.random.choice(['x', 'y', 'z'], size=n)
+
+    result = np.empty((n, 2), dtype=object)
+    result[:, 0] = angles_rad
+    result[:, 1] = axes
+
+    return result
+
+
+def exec_waypts(waypoints, random_rotations = False):
+    # reset joints:
+    fa = FrankaArm()
+    fa.reset_joints()
+
+    # if random_rotations == False:
+    #     trajectory, dt = spline_resample(waypoints)
+    #     print(trajectory[0:10])
+    #     print("dt: ", round(dt,3))
+    #     dt = round(dt,3)
+    #     controller = GotoPoseLive()
+    #     controller.start()
+
+    #     input("press enter to start dance!")
+
+    #     pose = FC.HOME_POSE.copy()
+    #     for i,p in enumerate(trajectory): 
+    #         print(i)
+    #         # pose = controller.fa.get_pose()
+    #         pose.translation = p
+    #         controller.set_goal_pose(pose)
+    #         # while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
+    #         time.sleep(dt)
+
+    #     controller.stop()
+    #     return "successfully run"
+
+    # elif random_rotations == True:
+    trajectory, dt = spline_resample(waypoints, num_samples = 200)
+    if random_rotations:
+        rotations = generate_rotation_array(len(trajectory),30)
+
+    dt = round(dt,3)
+    controller = GotoPoseLive()
+    controller.start()
+
+    input("press enter to start dance!")
+
+    pose = FC.HOME_POSE.copy()
+    for i,p in enumerate(trajectory): 
+        pose = FC.HOME_POSE.copy()
+        print(p)
+        if random_rotations:
+            print(rotations[i])
+            r = rotations[i]
+            if r[1] == 'x':
+                pose.rotation = apply_xrot(r[0],pose.rotation)
+            if r[1] == 'y':
+                pose.rotation = apply_yrot(r[0],pose.rotation)
+            if r[1] == 'z':
+                pose.rotation = apply_zrot(r[0],pose.rotation)
+
+        # pose = controller.fa.get_pose()
+        pose.translation = p[0:3]
+        
+        controller.set_goal_pose(pose)
+        # while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
+
+        time.sleep(dt)
+
+    controller.stop()
+    return "successfully run"
+
+
+
+if __name__=='__main__':
+    from query_gpt import queryGPT_waypoints
+    from audio_analysis import analyze_audio
+    # tstamps, timing = analyze_audio("suavemente.mp3")
+    # orientation_waypts = queryGPT_waypoints(tstamps,use_orientation=True)
+    # waypts = queryGPT_waypoints(tstamps)
+
+    waypts = np.hstack([WAYPOINTS,TSTAMPS.reshape(-1,1)])
+    # waypts = np.genfromtxt('franka_waypoints.csv',delimiter=',')
+    # waypts = np.zeros((len(orientation_waypts),4))
+    # waypts[:,0:3] = orientation_waypts[:,0:3]
+    # waypts[:,3] = orientation_waypts[:,7]
+    exec_waypts(waypts, random_rotations = False)
+    
+

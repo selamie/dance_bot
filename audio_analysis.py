@@ -11,7 +11,7 @@ def analyze_audio(audio_path, plot = False):
     # Determine a random 30-second segment within the audio duration
     duration = librosa.get_duration(y=y, sr=sr)
     if duration > 30:
-        start_time = 0#random.uniform(0, (duration - duration/3))
+        start_time = 0  # random.uniform(0, (duration - duration/3))
         end_time = start_time + 30
         print(f"Selected segment: {start_time:.2f}s to {end_time:.2f}s")
         
@@ -58,9 +58,8 @@ def analyze_audio(audio_path, plot = False):
 
     timestamps = [round(frame, 2) for frame in onset_times]
 
-    timestamps = np.union1d(timestamps,beat_times)
-    
-    timestamps.sort()
+    # timestamps = np.union1d(timestamps,beat_times)
+    # timestamps.sort()
 
     timing = (start_time, end_time)
     return timestamps, timing 
@@ -77,3 +76,4 @@ if __name__ == '__main__':
     audio_path = "suavemente.mp3"  # Replace with your file
     timestamps, timing = analyze_audio(audio_path, plot = True)
     print(format_time(timing[0]), " ", format_time(timing[1]))
+    print(timestamps)
