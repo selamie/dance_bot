@@ -3,10 +3,9 @@ import time
 from frankapy import FrankaArm # import franka arm
 from robomail.motion import GotoPoseLive
 from frankapy import FrankaConstants as FC 
-import copy
 from rospy import Rate
-from sample_from_spline import spline_resample, spline_resample_orient
-
+from sample_from_spline import spline_resample, spline_resample_euler
+from autolab_core import RigidTransform, transformations
 
 # rate = Rate(10)
 
@@ -83,6 +82,66 @@ TSTAMPS = np.array([
    27.28344671, 28.35156463, 29.73315193
 ])
 
+WAYPTS_EULER_DEG = np.array([
+ [0.55,  0.0,   0.4,   0.0,   0.0,   0.0,   0.34829932],
+ [0.57,  0.05,  0.42,  5.0,   -5.0,  5.0,   0.81269841],
+ [0.59,  0.1,   0.44,  10.0,  -10.0, 10.0,  1.10294785],
+ [0.61,  0.05,  0.46,  15.0,  -15.0, 15.0,  1.40480726],
+ [0.63,  0.0,   0.48,  20.0,  -20.0, 20.0,  1.71827664],
+ [0.65, -0.05,  0.5,   25.0,  -25.0, 25.0,  2.03174603],
+ [0.67, -0.1,   0.52,  20.0,  -20.0, 20.0,  2.33360544],
+ [0.69, -0.05,  0.54,  15.0,  -15.0, 15.0,  3.55265306],
+ [0.7,   0.0,   0.56,  10.0,  -10.0, 10.0,  3.86612245],
+ [0.68,  0.05,  0.58,  5.0,   -5.0,  5.0,   4.16798186],
+ [0.66,  0.1,   0.6,   0.0,    0.0,  0.0,   4.46984127],
+ [0.64,  0.05,  0.58, -5.0,    5.0, -5.0,   4.78331066],
+ [0.62,  0.0,   0.56, -10.0,  10.0, -10.0,  5.08517007],
+ [0.6,  -0.05,  0.54, -15.0,  15.0, -15.0,  5.39863946],
+ [0.58, -0.1,   0.52, -20.0,  20.0, -20.0,  5.70049887],
+ [0.56, -0.05,  0.5,  -25.0,  25.0, -25.0,  6.31582766],
+ [0.54,  0.0,   0.48, -20.0,  20.0, -20.0,  8.45206349],
+ [0.52,  0.05,  0.46, -15.0,  15.0, -15.0,  9.68272109],
+ [0.5,   0.1,   0.44, -10.0,  10.0, -10.0, 10.14712018],
+ [0.48,  0.05,  0.42, -5.0,    5.0,  -5.0, 10.5999093],
+ [0.46,  0.0,   0.4,   0.0,    0.0,   0.0, 10.90176871],
+ [0.48, -0.05,  0.38,  5.0,   -5.0,   5.0, 11.2152381],
+ [0.5,  -0.1,   0.36, 10.0,  -10.0,  10.0, 11.51709751],
+ [0.52, -0.05,  0.34, 15.0,  -15.0,  15.0, 11.83056689],
+ [0.54,  0.0,   0.32, 20.0,  -20.0,  20.0, 12.1324263],
+ [0.56,  0.05,  0.3,  25.0,  -25.0,  25.0, 12.58521542],
+ [0.58,  0.1,   0.32, 20.0,  -20.0,  20.0, 13.04961451],
+ [0.6,   0.05,  0.34, 15.0,  -15.0,  15.0, 13.3630839],
+ [0.62,  0.0,   0.36, 10.0,  -10.0,  10.0, 13.66494331],
+ [0.64, -0.05,  0.38,  5.0,   -5.0,   5.0, 15.04653061],
+ [0.66, -0.1,   0.4,   0.0,    0.0,   0.0, 16.10303855],
+ [0.68, -0.05,  0.42, -5.0,    5.0,  -5.0, 16.41650794],
+ [0.7,   0.0,   0.44,-10.0,   10.0, -10.0, 16.72997732],
+ [0.68,  0.05,  0.46,-15.0,   15.0, -15.0, 17.03183673],
+ [0.66,  0.1,   0.48,-20.0,   20.0, -20.0, 17.48462585],
+ [0.64,  0.05,  0.5, -25.0,   25.0, -25.0, 17.94902494],
+ [0.62,  0.0,   0.52,-20.0,   20.0, -20.0, 18.26249433],
+ [0.6,  -0.05,  0.54,-15.0,   15.0, -15.0, 18.55274376],
+ [0.58, -0.1,   0.56,-10.0,   10.0, -10.0, 18.86621315],
+ [0.56, -0.05,  0.58, -5.0,    5.0,  -5.0, 19.16807256],
+ [0.54,  0.0,   0.6,   0.0,    0.0,   0.0, 19.94594104],
+ [0.52,  0.05,  0.58,  5.0,   -5.0,   5.0, 20.39873016],
+ [0.5,   0.1,   0.56, 10.0,  -10.0,  10.0, 20.70058957],
+ [0.48,  0.05,  0.54, 15.0,  -15.0,  15.0, 20.96761905],
+ [0.46,  0.0,   0.52, 20.0,  -20.0,  20.0, 21.31591837],
+ [0.48, -0.05,  0.5,  25.0,  -25.0,  25.0, 21.93124717],
+ [0.5,  -0.1,   0.48, 20.0,  -20.0,  20.0, 22.39564626],
+ [0.52, -0.05,  0.46, 15.0,  -15.0,  15.0, 22.84843537],
+ [0.54,  0.0,   0.44, 10.0,  -10.0,  10.0, 23.41732426],
+ [0.56,  0.05,  0.42,  5.0,   -5.0,   5.0, 24.06748299],
+ [0.58,  0.1,   0.4,   0.0,    0.0,   0.0, 24.84535147],
+ [0.6,   0.05,  0.38, -5.0,    5.0,  -5.0, 25.29814059],
+ [0.62,  0.0,   0.36,-10.0,   10.0, -10.0, 25.86702948],
+ [0.64, -0.05,  0.34,-15.0,   15.0, -15.0, 26.8306576],
+ [0.66, -0.1,   0.32,-20.0,   20.0, -20.0, 27.28344671],
+ [0.68, -0.05,  0.3, -25.0,   25.0, -25.0, 28.35156463],
+ [0.7,   0.0,   0.32,-20.0,   20.0, -20.0, 29.73315193]
+])
+
 def quaternion_to_rotation_matrix(q):
     # Extract quaternion components from the 1x4 array
     qx, qy, qz, qw = q
@@ -133,10 +192,12 @@ def generate_rotation_array(n,degs):
     return result
 
 
-def exec_waypts(waypoints, random_rotations = False):
+def exec_waypts(waypoints, euler_rotations = False):
     # reset joints:
     fa = FrankaArm()
     fa.reset_joints()
+    # if changing base pose: fa.gotojoint()
+    # base = fa.get_pose.copy()
 
     # if random_rotations == False:
     #     trajectory, dt = spline_resample(waypoints)
@@ -161,37 +222,39 @@ def exec_waypts(waypoints, random_rotations = False):
     #     return "successfully run"
 
     # elif random_rotations == True:
-    trajectory, dt = spline_resample(waypoints, num_samples = 200)
-    if random_rotations:
-        rotations = generate_rotation_array(len(trajectory),30)
+    trajectory, dt = spline_resample_euler(waypoints, num_samples = 200)
 
-    dt = round(dt,3)
-    controller = GotoPoseLive()
+    # dt = round(dt,3)
+
+    default_impedances = np.array(FC.DEFAULT_TRANSLATIONAL_STIFFNESSES + FC.DEFAULT_ROTATIONAL_STIFFNESSES)
+    new_impedances = np.copy(default_impedances)
+    # new_impedances[3:] = np.array([0.5, 2, 0.5])*new_impedances[3:] # reduce the rotational stiffnesses, default in gotopose live
+    # new_impedances[:3] = np.array([0.5, 0.5, 1])*default_impedances[:3] # reduce the translational stiffnesse
+    new_impedances[3:] = np.array([0.5, 0.5, 0.5])*new_impedances[3:] # reduce the rotational stiffnesses, default in gotopose live
+    # new_impedances[:3] = np.array([0.5, 0.5, 0.5])*default_impedances[:3] # reduce the translational stiffnesse
+
+    controller = GotoPoseLive(cartesian_impedances=new_impedances.tolist())
+    # controller = GotoPoseLive() # default
     controller.start()
+    rate = Rate(1/dt)
 
     input("press enter to start dance!")
 
     pose = FC.HOME_POSE.copy()
     for i,p in enumerate(trajectory): 
         pose = FC.HOME_POSE.copy()
-        print(p)
-        if random_rotations:
-            print(rotations[i])
-            r = rotations[i]
-            if r[1] == 'x':
-                pose.rotation = apply_xrot(r[0],pose.rotation)
-            if r[1] == 'y':
-                pose.rotation = apply_yrot(r[0],pose.rotation)
-            if r[1] == 'z':
-                pose.rotation = apply_zrot(r[0],pose.rotation)
-
-        # pose = controller.fa.get_pose()
-        pose.translation = p[0:3]
         
+        pose.translation = p[0:3] #you could add another transform to point the "wrist" places instead of the eef
+        # look up delta transform for wrist to eef (prob in FC.constants)
+        #is it a bad idea to do it in place?
+        #TODO: do this in spline_resample instead maybe
+        pose.rotation = (transformations.euler_matrix(p[3],p[4],p[5])[0:3,0:3])@FC.HOME_POSE.copy().rotation
+
         controller.set_goal_pose(pose)
         # while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
 
-        time.sleep(dt)
+        rate.sleep()
+
 
     controller.stop()
     return "successfully run"
@@ -205,11 +268,13 @@ if __name__=='__main__':
     # orientation_waypts = queryGPT_waypoints(tstamps,use_orientation=True)
     # waypts = queryGPT_waypoints(tstamps)
 
-    waypts = np.hstack([WAYPOINTS,TSTAMPS.reshape(-1,1)])
+    # waypts = np.hstack([WAYPOINTS,TSTAMPS.reshape(-1,1)])
     # waypts = np.genfromtxt('franka_waypoints.csv',delimiter=',')
     # waypts = np.zeros((len(orientation_waypts),4))
     # waypts[:,0:3] = orientation_waypts[:,0:3]
     # waypts[:,3] = orientation_waypts[:,7]
-    exec_waypts(waypts, random_rotations = False)
+    # spline_resample_euler(WAYPTS_EULER_DEG)
+
+    exec_waypts(WAYPTS_EULER_DEG, euler_rotations = True)
     
 

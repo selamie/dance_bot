@@ -48,9 +48,10 @@ def queryGPT_waypoints(timestamps,use_orientation = False):
         The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
         The x,y,z coordinates of this bounded rectangle are: 
         \n\n[[0.35,-0.15,0.2], [0.35,0.15,0.2], [0.35,-0.15,0.6], [0.35,0.15,0.6], [0.7,-0.15,0.2], [0.7,0.15,0.2], [0.7,-0.15,0.6], [0.7,0.15,0.6]]
+        \n For rotation, we use euler angles (roll, pitch, yaw) with respect to the robot's home pose. Commanded angles should be between -30 and 30 degrees. 
         \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
-        \n\n Respond with a plan of [x,y,z,qx,qy,qz,qw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
-        \n\nHere is a list of timestamps in seconds at which the movements should occur: 
+        \n\n Respond with a plan of [x,y,z,roll,pitch,yaw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
+        \n\nHere is the list of timestamps in seconds at which the movements should occur: 
         \n\n {timestamps}
         Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
         \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""

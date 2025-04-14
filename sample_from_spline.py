@@ -122,16 +122,25 @@ def spline_resample(waypoints, num_samples = 250, total_dur = 30, plot = False):
         print(resampled_motion)
     return resampled_motion, dt
 
-def spline_resample_orient(waypoints, num_samples = 1000, total_dur = 30, plot = False):
+def spline_resample_euler(waypoints, num_samples = 1000, total_dur = 30, plot = False):
     # Extract t and corresponding x, y, z
+
+    def waypoints_deg2rad(w):
+        degs_arr = w[:,3:6]
+        for i, angle in enumerate(degs_arr):
+            degs_arr[i] = np.deg2rad(angle)
+        w[:,3:6] = degs_arr
+        return w
+    waypoints = waypoints_deg2rad(waypoints)
+    print(waypoints)
+
     t = waypoints[:, -1]  # Time values
     x = waypoints[:, 0]
     y = waypoints[:, 1]
     z = waypoints[:, 2]
-    qx = waypoints[:,3] 
-    qy = waypoints[:,4]
-    qz = waypoints[:,5]
-    qw = waypoints[:,6]
+    roll = waypoints[:,3] 
+    pitch = waypoints[:,4]
+    yaw = waypoints[:,5]
 
     # Ensure t is strictly increasing
     if not np.all(np.diff(t) > 0):
@@ -141,10 +150,9 @@ def spline_resample_orient(waypoints, num_samples = 1000, total_dur = 30, plot =
     spl_x = CubicSpline(t, x)
     spl_y = CubicSpline(t, y)
     spl_z = CubicSpline(t, z)
-    spl_qx = CubicSpline(t, qx)
-    spl_qy = CubicSpline(t, qy)
-    spl_qz = CubicSpline(t, qz)
-    spl_qw = CubicSpline(t, qw)
+    spl_roll = CubicSpline(t, roll)
+    spl_pitch = CubicSpline(t, pitch)
+    spl_yaw = CubicSpline(t, yaw)
 
 
     # Define new time values for resampling (e.g., 100 evenly spaced time steps)
@@ -154,15 +162,14 @@ def spline_resample_orient(waypoints, num_samples = 1000, total_dur = 30, plot =
     x_new = spl_x(t_new)
     y_new = spl_y(t_new)
     z_new = spl_z(t_new)
-    qx_new = spl_qx(t_new)
-    qy_new = spl_qy(t_new)
-    qz_new = spl_qz(t_new)
-    qw_new = spl_qw(t_new)
+    roll_new = spl_roll(t_new)
+    pitch_new = spl_pitch(t_new)
+    yaw_new = spl_yaw(t_new)
 
 
     dt = np.diff(t_new)[0]
     # Interpolated motion trajectory
-    resampled_motion = np.vstack([x_new, y_new, z_new,qx_new,qy_new,qz_new,qw_new]).T
+    resampled_motion = np.vstack([x_new, y_new, z_new,roll_new,pitch_new,yaw_new]).T
 
     # Plot trajectory
     if plot: 
