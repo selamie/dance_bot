@@ -10,6 +10,7 @@ from audio_analysis import analyze_audio, format_time
 from query_gpt import queryGPT_waypoints
 
 class dancing_bot:
+    #TODO: to avoid too many fa classes, can pass fa into init
     
     def __init__(self, audio_path = "suavemente.mp3", query_orientation = False, random_rotations = False ):
         self.query_orientation = query_orientation
