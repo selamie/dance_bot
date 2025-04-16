@@ -88,7 +88,7 @@ def spline_resample(waypoints, num_samples = 250, total_dur = 30, plot = False):
 
     # Ensure t is strictly increasing
     if not np.all(np.diff(t) > 0):
-        raise ValueError("Time values must be strictly increasing, or used wrong waypoints.")
+        raise ValueError("Time values must be strictly increasing, or used wrong waypoints type.")
 
     # Fit cubic splines for x, y, and z as functions of time t
     spl_x = CubicSpline(t, x)

@@ -5,13 +5,16 @@ import matplotlib.pyplot as plt
 import random
 
 
-def analyze_audio(audio_path, plot = False):
+def analyze_audio(audio_path, audio_start = None, plot = False):
     y, sr = librosa.load(audio_path, sr=None)
 
     # Determine a random 30-second segment within the audio duration
     duration = librosa.get_duration(y=y, sr=sr)
     if duration > 30:
-        start_time = 0  # random.uniform(0, (duration - duration/3))
+        if audio_start == None: 
+            start_time = random.uniform(0, (duration - duration/3))
+        else: 
+            start_time = audio_start
         end_time = start_time + 30
         print(f"Selected segment: {start_time:.2f}s to {end_time:.2f}s")
         

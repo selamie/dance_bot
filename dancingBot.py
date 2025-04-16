@@ -1,76 +1,98 @@
 import numpy as np 
-import time
 from frankapy import FrankaArm # import franka arm
 from robomail.motion import GotoPoseLive
 from frankapy import FrankaConstants as FC 
-import copy
+from rospy import Rate
 
-from sample_from_spline import spline_resample, spline_resample_orient
+from sample_from_spline import spline_resample, spline_resample_euler
 from audio_analysis import analyze_audio, format_time
 from query_gpt import queryGPT_waypoints
+from autolab_core import transformations
 
-class dancing_bot:
+class DancingBot:
     #TODO: to avoid too many fa classes, can pass fa into init
     
-    def __init__(self, audio_path = "suavemente.mp3", query_orientation = False, random_rotations = False ):
+    def __init__(self, franka = None, audio_path = "suavemente.mp3", audio_start = None, query_orientation = True):
         self.query_orientation = query_orientation
-        self.random_rotation = random_rotations
-        self.audio_path = audio_path
+        # self.audio_path = audio_path
         self.trajectory = None
         self.dt = 0
-        self.timestamps, self.timing = analyze_audio(self.audio_path)
+
+        # franka setup
+        if franka == None:
+            self.fa = FrankaArm()
+        else: 
+            #if using this, have to setup impedances elsewhere
+            self.fa = franka
+        assert isinstance(self.fa,FrankaArm)
+
+
+        #done, now setup)
+        self.timestamps, self.timing = analyze_audio(audio_path, audio_start)
+
+        self.fa.reset_joints()
 
     def sample_from_spline(self, waypoints):
-        return spline_resample(waypoints)
+        if self.query_orientation:
+            return spline_resample_euler(waypoints)
+        else:
+            return spline_resample(waypoints)
     
     def query_gpt(self):
         waypoints = [-1]
         while len(waypoints) != len(self.timestamps):
             waypoints = queryGPT_waypoints(self.timestamps, self.query_orientation)
-            print(len(waypoints), " ", len(self.timestamps))
+            print("waypts v tstamps: ", len(waypoints), " ", len(self.timestamps))
         return waypoints
 
     def load(self):
         self.waypoints = self.query_gpt()
         print("waypts shape:", self.waypoints.shape)
         self.trajectory, self.dt = self.sample_from_spline(self.waypoints)
+    
+    def set_audio(self, audio_path, audio_start = None):
+        #sets a new audio path, but need to call load again
+        self.timestamps, self.timing  = analyze_audio(audio_path, audio_start)
+        print("set new audio path, call load to create new trajectory")
+        return True
 
     def run(self):
         if np.any(self.trajectory) == None: 
             return "no trajectory, load first"
         else:
             assert self.dt != 0
-            fa = FrankaArm()
-            fa.reset_joints()
-            controller = GotoPoseLive()
+            rate = Rate(1/self.dt)
+            self.fa.reset_joints()
+
+            default_impedances = np.array(FC.DEFAULT_TRANSLATIONAL_STIFFNESSES + FC.DEFAULT_ROTATIONAL_STIFFNESSES)
+            new_impedances = np.copy(default_impedances)
+            new_impedances[3:] = np.array([0.5, 0.5, 0.5])*new_impedances[3:]
+            controller = GotoPoseLive(cartesian_impedances=new_impedances.tolist())
+
             controller.start()
 
             input("press enter to start dance!")
 
-            pose = FC.HOME_POSE.copy()
             for i,p in enumerate(self.trajectory): 
-                print(i)
-                # pose = controller.fa.get_pose()
+                pose = FC.HOME_POSE.copy()
                 pose.translation = p[0:3]
-                if self.random_rotation:
-                    print("orientation not yet implemented")
-                    break
-                    # rot = quaternion_to_rotation_matrix(p[3:7])
-                    # if np.abs(np.linalg.det(rot)) ==1:
-                    #     print("here")
-                    #     pose.rotation = rot
+                if self.query_orientation:
+                    pose.rotation = (transformations.euler_matrix(p[3],p[4],p[5])[0:3,0:3])@FC.HOME_POSE.copy().rotation
 
                 controller.set_goal_pose(pose)
                 # while np.linalg.norm(controller.fa.get_pose().translation - p) > 0.03:
-                time.sleep(self.dt)
+                rate.sleep()
 
-            controller.stop()
+            controller.stop()            
+
 
 if __name__ == '__main__':
-    bot = dancing_bot(audio_path="suavemente.mp3")
+    
+    bot = DancingBot(franka=None,audio_path="suavemente.mp3", audio_start=0, query_orientation=True)
     bot.load()
     print("loaded successfully")
     bot.run()
+
 
 
 # # reset joints:
