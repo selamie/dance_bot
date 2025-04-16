@@ -1,30 +1,21 @@
 from openai import OpenAI
 import re
+import numpy as np
 
-# Set your API key
 def extract_waypoints(text):
-    # pattern of 3 list values
-    # pattern = r"\[\s*(\[\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?\s*\](?:,\s*\[\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?\s*\])*)\s*\]"
-    # match = re.search(pattern, text, re.DOTALL)
-    # if match:
-    #     extracted_list = match.group(1)  # Extract the list content inside the outer brackets
-    #     clean_string = "[" + extracted_list.replace(" ", "").replace("\n", "") + "]"
-    #     return clean_string
-    # else:
-    #     return None
-
-    # pattern of 4 list values
-    pattern = r"\[\s*(\[\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?\s*\](?:,\s*\[\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?\s*\])*)\s*\]"
+    # This regex matches lists like [[1,2,3],[4.0,5.1,-6.2,7,8.9],...]
+    pattern = r"\[\s*(\[\s*(-?\d+(\.\d+)?)(\s*,\s*-?\d+(\.\d+)?)*\s*\](\s*,\s*\[\s*-?\d+(\.\d+)?(\s*,\s*-?\d+(\.\d+)?)*\s*\])*)\s*\]"
 
     match = re.search(pattern, text, re.DOTALL)
     if match:
-        extracted_list = match.group(1)  # Extract list content
-        clean_string = "[" + extracted_list.replace(" ", "").replace("\n", "") + "]"
-        return clean_string  
+        extracted_list = match.group(0)  # Full list including brackets
+        clean_string = extracted_list.replace(" ", "").replace("\n", "")
+        return clean_string
     else:
         return None
 
-def queryGPT_waypoints(timestamps):
+def queryGPT_waypoints(timestamps,use_orientation = False, max_degrees = 30):
+    
     api_key = "sk-BmKxDbClXUMnzJCMo12rLA"
     client = OpenAI(api_key=api_key,
                     base_url="https://cmu.litellm.ai")
@@ -48,11 +39,24 @@ def queryGPT_waypoints(timestamps):
     \n\nIn addition, we have a list of timestamps in seconds at which the movements should occur: 
     \n\n {timestamps}
     \n\n Respond with a plan of [x,y,z,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list above. 
-    Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. In general,
-    try to use v-shaped motions since you are commanding the "head" of the robot on the "neck" of its arm.
+    Keep in mind the amount of time between the timestamps when considering how far to move. Be sure to vary the orientation slightly. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
     \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
     
     # Make the API call
+
+    if use_orientation == True: 
+        prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
+        The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
+        The x,y,z coordinates of this bounded rectangle are: 
+        \n\n[[0.35,-0.15,0.2], [0.35,0.15,0.2], [0.35,-0.15,0.6], [0.35,0.15,0.6], [0.7,-0.15,0.2], [0.7,0.15,0.2], [0.7,-0.15,0.6], [0.7,0.15,0.6]]
+        \n For rotation, we use euler angles (roll, pitch, yaw) with respect to the robot's home pose. Commanded angles should be between -{max_degrees} and {max_degrees} degrees. 
+        \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
+        \n\n Respond with a plan of [x,y,z,roll,pitch,yaw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
+        \n\nHere is the list of timestamps in seconds at which the movements should occur: 
+        \n\n {timestamps}
+        Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
+        \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
+    
 
     # print(prompt)
     completion = client.chat.completions.create(
@@ -69,17 +73,17 @@ def queryGPT_waypoints(timestamps):
 
         waypoints = eval(extract_waypoints(waypoints_text))
         print("successfully got waypts from gpt")
-        return waypoints
+        return np.array(waypoints)
     except: 
         print("couldn't do it, try again")
-        # print(waypoints_text)
+        print(waypoints_text)
         return [-1]
     # Print or process the waypoints
     
 
 if __name__== "__main__":
     from audio_analysis import analyze_audio
-    tstamps, timing = analyze_audio("skutababa.mp3")
+    tstamps, timing = analyze_audio("suavemente.mp3")
 #     tstamps = """[ 0.34829932  0.81269841  1.10294785  1.40480726  1.71827664  2.03174603
 #   2.33360544  3.55265306  3.86612245  4.16798186  4.46984127  4.78331066
 #   5.08517007  5.39863946  5.70049887  6.31582766  8.45206349  9.68272109
@@ -90,6 +94,7 @@ if __name__== "__main__":
 #  20.70058957 20.96761905 21.31591837 21.93124717 22.39564626 22.84843537
 #  23.41732426 24.06748299 24.84535147 25.29814059 25.86702948 26.8306576
 #  27.28344671 28.35156463 29.73315193]"""
-    waypts = queryGPT_waypoints(tstamps)
+    waypts = queryGPT_waypoints(tstamps,use_orientation=True)
+    print(waypts)
     print(len(waypts))
     print(len(tstamps))

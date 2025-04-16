@@ -4,6 +4,8 @@ from frankapy import FrankaArm # import franka arm
 from robomail.motion import GotoPoseLive
 from frankapy import FrankaConstants as FC 
 import copy
+from autolab_core import RigidTransform, transformations
+
 
 # def apply_xrot(rad,pose):
 # 	xrot = np.array([[1,0,0],[0,np.cos(rad),-np.sin(rad)],[0,np.sin(rad),np.cos(rad)]])
@@ -13,6 +15,8 @@ import copy
 
 fa = FrankaArm()
 fa.reset_joints()
+
+import pdb;pdb.set_trace()
 
 controller = GotoPoseLive()
 
