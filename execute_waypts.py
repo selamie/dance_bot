@@ -74,7 +74,7 @@ MANUAL_WAYPTS = np.array([
  [0.7,   0.0,   0.32,-20.0,   20.0, -20.0, 29.73315193]
 ])
 
-def querygpt_custom(customize,timestamps,use_orientation = True):
+def querygpt_custom(customize,timestamps,use_orientation = True, max_degrees=30):
     api_key = "sk-BmKxDbClXUMnzJCMo12rLA"
     client = OpenAI(api_key=api_key,
                     base_url="https://cmu.litellm.ai")
@@ -96,7 +96,7 @@ def querygpt_custom(customize,timestamps,use_orientation = True):
         The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
         The x,y,z coordinates of this bounded rectangle are: 
         \n\n[[0.35,-0.15,0.2], [0.35,0.15,0.2], [0.35,-0.15,0.6], [0.35,0.15,0.6], [0.7,-0.15,0.2], [0.7,0.15,0.2], [0.7,-0.15,0.6], [0.7,0.15,0.6]]
-        \nFor rotation, we use euler angles (roll, pitch, yaw) with respect to the robot's home pose. Commanded angles should be between -30 and 30 degrees. 
+        \nFor rotation, we use euler angles (roll, pitch, yaw) with respect to the robot's home pose. Commanded angles should be between -{max_degrees} and {max_degrees} degrees. 
         \nYour response should also follow the format of the workspace bounds, which is a list of lists. 
         \nRespond with a plan of [x,y,z,roll,pitch,yaw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
         \n\nHere is the list of timestamps in seconds at which the movements should occur: 
@@ -130,9 +130,12 @@ def querygpt_custom(customize,timestamps,use_orientation = True):
     # Print or process the waypoints
     
 
-def exec_waypts(waypoints, euler_rotations =True):
+def exec_waypts(franka, waypoints, euler_rotations =True):
     # reset joints:
-    fa = FrankaArm()
+    if franka == None: 
+        fa = FrankaArm()
+    else:
+        fa = franka
     fa.reset_joints()
     # if changing base pose: fa.gotojoint()
     # base = fa.get_pose.copy()
@@ -189,6 +192,6 @@ if __name__=='__main__':
     # waypts[:,3] = orientation_waypts[:,7]
     # spline_resample_euler(WAYPTS_EULER_DEG)
 
-    exec_waypts(waypts, euler_rotations = False)
+    exec_waypts(franka = None, waypoints = waypts, euler_rotations = False)
     
 

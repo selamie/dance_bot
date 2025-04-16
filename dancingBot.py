@@ -53,7 +53,6 @@ class DancingBot:
     def set_audio(self, audio_path, audio_start = None):
         #sets a new audio path, but need to call load again
         self.timestamps, self.timing  = analyze_audio(audio_path, audio_start)
-        print("set new audio path, call load to create new trajectory")
         return True
 
     def run(self):
