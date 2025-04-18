@@ -102,12 +102,16 @@ def querygpt_custom(customize,timestamps,use_orientation = True, max_degrees=30)
         \n\nHere is the list of timestamps in seconds at which the movements should occur: 
         \n\n {timestamps} \n"""
 
-    end_prompt = """\nKeep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
-    \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
+    if use_orientation: 
+        end_prompt = """\nKeep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
+        \n\nRespond with only the list-of-lists of waypoints [[x,y,z,roll,pitch,yaw,t],...], and no other text. Start with the character `[`"""
+    elif not use_orientation:
+        end_prompt = """\nKeep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
+        \n\nRespond with only the list-of-lists of waypoints [[x,y,z,t],...], and no other text. Start with the character `[`"""
 
     prompt = base_prompt + customize + end_prompt
 
-    # print(prompt)
+
     completion = client.chat.completions.create(
         model="gpt-4o",  # Adjust model if needed
         messages=[{"role": "system", "content": "You are an AI assistant."},
@@ -119,9 +123,11 @@ def querygpt_custom(customize,timestamps,use_orientation = True, max_degrees=30)
     # print(waypoints_text)
     # print(extract_waypoints(waypoints_text))
     try: 
+        print("trying to extract")
 
         waypoints = eval(extract_waypoints(waypoints_text))
         print("successfully got waypts from gpt")
+        print("test point: ", waypoints[0])
         return np.array(waypoints)
     except: 
         print("couldn't extract waypts from gpt, try again")

@@ -79,6 +79,9 @@ def queryGPT_waypoints(timestamps,use_orientation = False, max_degrees = 30):
         print(waypoints_text)
         return [-1]
     # Print or process the waypoints
+
+def queryllama_waypoint():
+    pass
     
 
 if __name__== "__main__":
