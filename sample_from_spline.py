@@ -2,6 +2,9 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
 
+from scipy.interpolate import BSpline, make_lsq_spline
+from scipy.optimize import minimize
+
 # Example 4D waypoints (x, y, z, t)
 
 # start time: 78.6551831130475, end: 108.6551831130475
@@ -121,6 +124,7 @@ def spline_resample(waypoints, num_samples = 250, total_dur = 30, plot = False):
 
         print(resampled_motion)
     return resampled_motion, dt
+
 
 def spline_resample_euler(waypoints, num_samples = 1000, total_dur = 30, plot = False):
     # Extract t and corresponding x, y, z

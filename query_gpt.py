@@ -19,44 +19,52 @@ def queryGPT_waypoints(timestamps,use_orientation = False, max_degrees = 30):
     api_key = "sk-BmKxDbClXUMnzJCMo12rLA"
     client = OpenAI(api_key=api_key,
                     base_url="https://cmu.litellm.ai")
-    # Define the prompt
-    # prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
-    # The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
-    # The x,y,z coordinates of this bounded rectangle are: 
-    # \n\n[[0.35,-0.2,0.2], [0.35,0.2,0.2], [0.35,-0.2,0.6], [0.35,0.2,0.6], [0.7,-0.2,0.2], [0.7,0.2,0.2], [0.7,-0.2,0.6], [0.7,0.2,0.6]]
-    # \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
-    # \n\nIn addition, we have a list of timestamps in seconds at which the movements should occur: 
-    # \n\n {timestamps}
-    # \n\n Respond with a plan of [x,y,z,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list above. 
-    # Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. In general,
-    # try to use v-shaped motions since you are commanding the "head" of the robot on the "neck" of its arm.
-    # \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
-    prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
-    The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
-    The x,y,z coordinates of this bounded rectangle are: 
-    \n\n[[0.35,-0.2,0.2], [0.35,0.2,0.2], [0.35,-0.2,0.6], [0.35,0.2,0.6], [0.7,-0.2,0.2], [0.7,0.2,0.2], [0.7,-0.2,0.6], [0.7,0.2,0.6]]
-    \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
-    \n\nIn addition, we have a list of timestamps in seconds at which the movements should occur: 
-    \n\n {timestamps}
-    \n\n Respond with a plan of [x,y,z,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list above. 
-    Keep in mind the amount of time between the timestamps when considering how far to move. Be sure to vary the orientation slightly. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
-    \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
-    
+
     # Make the API call
 
-    if use_orientation == True: 
-        prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
+    if use_orientation: 
+        if type(max_degrees) == int:
+            prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
+            The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
+            The x,y,z coordinates of this bounded rectangle are: 
+            \n\n[[0.35,-0.2,0.2], [0.35,0.2,0.2], [0.35,-0.2,0.6], [0.35,0.2,0.6], [0.7,-0.2,0.2], [0.7,0.2,0.2], [0.7,-0.2,0.6], [0.7,0.2,0.6]]
+            \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
+            \n\n Respond with a plan of [x,y,z,roll,pitch,yaw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
+            \n\nHere is the list of timestamps in seconds at which the movements should occur: 
+            \n\n {timestamps}
+            Keep in mind the amount of time between the timestamps when considering how far to move. 
+            The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
+            Respect all boundaries and try not to get too close to workspace or angle limits.
+            \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
+
+        elif type(max_degrees) == list: 
+            assert len(max_degrees) == 3
+            prompt = f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
+            The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
+            The x,y,z coordinates of this bounded rectangle are: 
+            \n\n[[0.35,-0.2,0.2], [0.35,0.2,0.2], [0.35,-0.2,0.6], [0.35,0.2,0.6], [0.7,-0.2,0.2], [0.7,0.2,0.2], [0.7,-0.2,0.6], [0.7,0.2,0.6]]
+            \n For rotation, we use euler angles (roll, pitch, yaw) with respect to the robot's home pose. Angle limits in degrees are are: roll [{-max_degrees[0]}, {max_degrees[0]}], 
+            pitch [{-max_degrees[1]}, {max_degrees[1]}], [{-max_degrees[2]}, {max_degrees[2]}].
+            \n\n Respond with a plan of [x,y,z,roll,pitch,yaw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
+            \n\nHere is the list of timestamps in seconds at which the movements should occur: 
+            \n\n {timestamps}
+            Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
+            Respect all boundaries and try not to get too close to workspace or angle limits.
+            \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
+    
+    elif not use_orientation:
+        prompt =  f"""You are choreographing a dance for a robot mounted to a table. You will help me generate the waypoints of this dance. 
         The allowable workspace for the robot is within the bounds of a 3-D rectangle. 
         The x,y,z coordinates of this bounded rectangle are: 
-        \n\n[[0.35,-0.15,0.2], [0.35,0.15,0.2], [0.35,-0.15,0.6], [0.35,0.15,0.6], [0.7,-0.15,0.2], [0.7,0.15,0.2], [0.7,-0.15,0.6], [0.7,0.15,0.6]]
-        \n For rotation, we use euler angles (roll, pitch, yaw) with respect to the robot's home pose. Commanded angles should be between -{max_degrees} and {max_degrees} degrees. 
+        \n\n[[0.35,-0.2,0.2], [0.35,0.2,0.2], [0.35,-0.2,0.6], [0.35,0.2,0.6], [0.7,-0.2,0.2], [0.7,0.2,0.2], [0.7,-0.2,0.6], [0.7,0.2,0.6]]
         \n Your response should also follow the format of the workspace bounds, which is a list of lists. 
-        \n\n Respond with a plan of [x,y,z,roll,pitch,yaw,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
-        \n\nHere is the list of timestamps in seconds at which the movements should occur: 
-        \n\n {timestamps}
-        Keep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
-        \n\nRespond with only the list-of-lists of waypoints, and no other text. Start with the character `[`"""
-    
+        \n Respond with a plan of [x,y,z,t] waypoints for the dance in a list of arrays, with each waypoint corresponding to a timestamp 't' from the list below. 
+        \n\nIn addition, we have a list of timestamps in seconds at which the movements should occur: 
+        \n\n {timestamps} \n
+        \nKeep in mind the amount of time between the timestamps when considering how far to move. The coordinates are in meters, so a jump of 0.1 corresponds to 10 centimeters. 
+        Respect all boundaries and try not to get too close to workspace or angle limits.
+        \n\nRespond with only the list-of-lists of waypoints [[x,y,z,t],...], and no other text. Start with the character `[`"""
+
 
     # print(prompt)
     completion = client.chat.completions.create(
@@ -79,6 +87,9 @@ def queryGPT_waypoints(timestamps,use_orientation = False, max_degrees = 30):
         print(waypoints_text)
         return [-1]
     # Print or process the waypoints
+
+def queryllama_waypoint():
+    pass
     
 
 if __name__== "__main__":
