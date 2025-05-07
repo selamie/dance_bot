@@ -3,6 +3,9 @@ from execute_waypts import querygpt_custom
 from audio_analysis import analyze_audio
 from frankapy import FrankaArm
 
+## an old experiment script kept for archival purposes. 
+## This has to be moved back in to the main folder to run successfully due to above imports. 
+
 fa = FrankaArm()
 fa.reset_joints()
 tstamps, timing = analyze_audio("audio_files/suavemente.mp3", audio_start=0)

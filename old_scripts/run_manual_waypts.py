@@ -5,6 +5,9 @@ from frankapy import FrankaArm
 from openai import OpenAI
 import numpy as np
 
+## an old experiment script kept for archival purposes. 
+## This has to be moved back in to the main folder to run successfully due to above imports. 
+
 def querygpt_manual(timestamps, max_degrees=30):
     api_key = "sk-BmKxDbClXUMnzJCMo12rLA"
     client = OpenAI(api_key=api_key,
